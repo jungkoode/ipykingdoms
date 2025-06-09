@@ -4,16 +4,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kingdoms of Aurenne and Daeryndor - Interactive Map</title>
+    <title>The Twin Kingdoms of Aurenne and Daeryndor - Enhanced Interactive Map</title>
 
 ```
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
+<!-- Additional Libraries -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+
 <!-- Google Fonts for medieval aesthetic -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=MedievalSharp&display=swap" rel="stylesheet">
 
 <style>
     * {
@@ -26,13 +29,32 @@
         font-family: 'Crimson Text', serif;
         background: linear-gradient(135deg, #8B4513, #D2B48C);
         overflow: hidden;
+        position: relative;
+    }
+
+    /* Particles Background */
+    #particles-js {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        pointer-events: none;
     }
 
     #map {
         width: 100vw;
         height: 100vh;
         background: #f4f1e8;
+        position: relative;
+        z-index: 2;
+        transition: filter 0.5s ease;
     }
+
+    /* Day/Night Cycle Classes */
+    .map-dawn { filter: sepia(0.1) brightness(0.9) hue-rotate(20deg); }
+    .map-day { filter: none; }
+    .map-dusk { filter: sepia(0.3) brightness(0.8) hue-rotate(340deg); }
+    .map-night { filter: sepia(0.5) brightness(0.6) hue-rotate(220deg); }
 
     .map-title {
         position: absolute;
@@ -40,149 +62,227 @@
         left: 50%;
         transform: translateX(-50%);
         z-index: 1000;
-        background: rgba(139, 69, 19, 0.9);
+        background: linear-gradient(135deg, rgba(139, 69, 19, 0.95), rgba(101, 67, 33, 0.95));
         color: #f4f1e8;
         padding: 15px 30px;
-        border-radius: 8px;
-        border: 2px solid #8B6914;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        border-radius: 12px;
+        border: 3px solid #D4AF37;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4), 
+                    inset 0 2px 5px rgba(212, 175, 55, 0.3);
         font-family: 'Cinzel', serif;
         font-size: 1.8rem;
-        font-weight: 600;
+        font-weight: 700;
         text-align: center;
         letter-spacing: 2px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        position: relative;
     }
 
-    .kingdom-info-panel {
+    .map-title::before {
+        content: '';
+        position: absolute;
+        top: -5px;
+        left: -5px;
+        right: -5px;
+        bottom: -5px;
+        background: linear-gradient(45deg, #D4AF37, #FFD700, #D4AF37, #B8860B);
+        border-radius: 15px;
+        z-index: -1;
+        opacity: 0.7;
+    }
+
+    /* Enhanced Control Panel */
+    .control-panel {
         position: absolute;
         top: 100px;
         right: 20px;
-        width: 320px;
-        background: rgba(139, 69, 19, 0.95);
-        color: #f4f1e8;
-        border-radius: 10px;
-        border: 2px solid #8B6914;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        width: 350px;
+        background: linear-gradient(135deg, rgba(139, 69, 19, 0.95), rgba(101, 67, 33, 0.95));
+        border: 3px solid #D4AF37;
+        border-radius: 15px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
         z-index: 1000;
         max-height: calc(100vh - 140px);
         overflow-y: auto;
-        display: none;
+        backdrop-filter: blur(5px);
     }
 
-    .panel-header {
-        background: #654321;
-        padding: 15px;
-        border-bottom: 2px solid #8B6914;
-        font-family: 'Cinzel', serif;
-        font-size: 1.3rem;
-        font-weight: 600;
+    .panel-tabs {
+        display: flex;
+        border-bottom: 2px solid #D4AF37;
+    }
+
+    .panel-tab {
+        flex: 1;
+        padding: 12px 8px;
+        background: rgba(101, 67, 33, 0.8);
+        color: #f4f1e8;
         text-align: center;
+        cursor: pointer;
+        font-family: 'Cinzel', serif;
+        font-weight: 600;
+        font-size: 0.9rem;
+        border-right: 1px solid #D4AF37;
+        transition: all 0.3s ease;
+    }
+
+    .panel-tab:last-child {
+        border-right: none;
+    }
+
+    .panel-tab.active {
+        background: linear-gradient(135deg, #D4AF37, #FFD700);
+        color: #2F4F4F;
+        text-shadow: none;
+    }
+
+    .panel-tab:hover:not(.active) {
+        background: rgba(212, 175, 55, 0.3);
     }
 
     .panel-content {
         padding: 20px;
-        line-height: 1.6;
+        color: #f4f1e8;
+        display: none;
+    }
+
+    .panel-content.active {
+        display: block;
     }
 
     .panel-content h3 {
         font-family: 'Cinzel', serif;
         color: #D4AF37;
-        margin-bottom: 10px;
-        font-size: 1.1rem;
+        margin-bottom: 15px;
+        font-size: 1.2rem;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
     }
 
     .panel-content p {
-        margin-bottom: 15px;
+        margin-bottom: 12px;
+        line-height: 1.6;
         font-size: 0.95rem;
     }
 
-    .close-panel {
+    /* Timeline Controls */
+    .timeline-control {
         position: absolute;
-        top: 10px;
-        right: 15px;
-        background: none;
-        border: none;
-        color: #f4f1e8;
-        font-size: 1.5rem;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, rgba(139, 69, 19, 0.95), rgba(101, 67, 33, 0.95));
+        border: 2px solid #D4AF37;
+        border-radius: 25px;
+        padding: 15px 25px;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .timeline-slider {
+        width: 300px;
+        height: 6px;
+        background: #654321;
+        border-radius: 3px;
+        position: relative;
         cursor: pointer;
-        padding: 5px;
     }
 
-    .close-panel:hover {
-        color: #D4AF37;
+    .timeline-handle {
+        width: 18px;
+        height: 18px;
+        background: #D4AF37;
+        border-radius: 50%;
+        position: absolute;
+        top: -6px;
+        cursor: grab;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        transition: transform 0.2s ease;
     }
 
-    /* Custom popup styling */
-    .leaflet-popup-content-wrapper {
-        background: rgba(139, 69, 19, 0.95);
+    .timeline-handle:hover {
+        transform: scale(1.2);
+    }
+
+    .timeline-label {
         color: #f4f1e8;
-        border: 2px solid #8B6914;
-        border-radius: 8px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    }
-
-    .leaflet-popup-content {
-        margin: 15px;
-        font-family: 'Crimson Text', serif;
-        line-height: 1.5;
-    }
-
-    .leaflet-popup-content h4 {
         font-family: 'Cinzel', serif;
-        color: #D4AF37;
-        margin-bottom: 8px;
-        font-size: 1.1rem;
+        font-size: 1rem;
+        font-weight: 600;
+        min-width: 120px;
+        text-align: center;
     }
 
-    .leaflet-popup-tip {
-        background: rgba(139, 69, 19, 0.95);
-        border: 2px solid #8B6914;
+    /* Achievement System */
+    .achievement-notification {
+        position: absolute;
+        top: 100px;
+        left: 20px;
+        background: linear-gradient(135deg, #D4AF37, #FFD700);
+        color: #2F4F4F;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        z-index: 1001;
+        transform: translateX(-120%);
+        transition: transform 0.5s ease;
+        font-family: 'Cinzel', serif;
+        font-weight: 600;
+        max-width: 280px;
     }
 
-    /* Custom control styling */
-    .leaflet-control-layers {
-        background: rgba(139, 69, 19, 0.9);
-        border: 2px solid #8B6914;
-        border-radius: 8px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    .achievement-notification.show {
+        transform: translateX(0);
     }
 
-    .leaflet-control-layers-label {
-        color: #f4f1e8;
-        font-family: 'Crimson Text', serif;
+    .achievement-icon {
+        font-size: 1.5rem;
+        margin-right: 10px;
     }
 
+    /* Search Control Enhancement */
     .search-control {
         position: absolute;
         top: 20px;
         left: 20px;
         z-index: 1000;
-        background: rgba(139, 69, 19, 0.9);
-        padding: 10px;
-        border-radius: 8px;
-        border: 2px solid #8B6914;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        background: linear-gradient(135deg, rgba(139, 69, 19, 0.95), rgba(101, 67, 33, 0.95));
+        padding: 12px 15px;
+        border-radius: 25px;
+        border: 2px solid #D4AF37;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        display: flex;
+        align-items: center;
+        gap: 10px;
     }
 
     .search-control input {
-        background: #f4f1e8;
-        border: 1px solid #8B6914;
-        border-radius: 4px;
-        padding: 8px 12px;
+        background: rgba(244, 241, 232, 0.9);
+        border: 1px solid #D4AF37;
+        border-radius: 15px;
+        padding: 8px 15px;
         font-family: 'Crimson Text', serif;
-        width: 200px;
+        width: 220px;
+        color: #2F4F4F;
     }
 
     .search-control input:focus {
         outline: none;
-        border-color: #D4AF37;
-        box-shadow: 0 0 5px rgba(212, 175, 55, 0.5);
+        border-color: #FFD700;
+        box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
     }
 
-    /* Custom marker styling */
-    .kingdom-marker {
-        width: 30px;
-        height: 30px;
+    .search-control i {
+        color: #D4AF37;
+        font-size: 1.2rem;
+    }
+
+    /* Enhanced Marker Styles */
+    .custom-marker {
+        width: 35px;
+        height: 35px;
         border-radius: 50%;
         border: 3px solid;
         display: flex;
@@ -191,20 +291,139 @@
         font-weight: bold;
         color: white;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        font-size: 1.2rem;
+    }
+
+    .custom-marker:hover {
+        transform: scale(1.2);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6);
     }
 
     .aurenne-marker {
-        background: linear-gradient(135deg, #DAA520, #FFD700);
+        background: radial-gradient(circle, #DAA520, #FFD700, #B8860B);
         border-color: #B8860B;
+        animation: golden-pulse 3s ease-in-out infinite;
     }
 
     .daeryndor-marker {
-        background: linear-gradient(135deg, #2F4F4F, #708090);
+        background: radial-gradient(circle, #2F4F4F, #708090, #1C1C1C);
         border-color: #1C1C1C;
+        animation: silver-pulse 3s ease-in-out infinite;
     }
 
-    /* Mobile responsive */
+    .border-marker {
+        background: radial-gradient(circle, #8B4513, #D2B48C, #654321);
+        border-color: #654321;
+        animation: neutral-pulse 3s ease-in-out infinite;
+    }
+
+    .secret-marker {
+        background: radial-gradient(circle, #9370DB, #DDA0DD, #8A2BE2);
+        border-color: #8A2BE2;
+        animation: mystical-pulse 3s ease-in-out infinite;
+        opacity: 0.7;
+    }
+
+    @keyframes golden-pulse {
+        0%, 100% { box-shadow: 0 3px 10px rgba(218, 165, 32, 0.4); }
+        50% { box-shadow: 0 5px 20px rgba(255, 215, 0, 0.8); }
+    }
+
+    @keyframes silver-pulse {
+        0%, 100% { box-shadow: 0 3px 10px rgba(47, 79, 79, 0.4); }
+        50% { box-shadow: 0 5px 20px rgba(112, 128, 144, 0.8); }
+    }
+
+    @keyframes neutral-pulse {
+        0%, 100% { box-shadow: 0 3px 10px rgba(139, 69, 19, 0.4); }
+        50% { box-shadow: 0 5px 20px rgba(210, 180, 140, 0.8); }
+    }
+
+    @keyframes mystical-pulse {
+        0%, 100% { box-shadow: 0 3px 10px rgba(147, 112, 219, 0.4); }
+        50% { box-shadow: 0 5px 20px rgba(138, 43, 226, 0.8); }
+    }
+
+    /* Relationship Lines */
+    .relationship-line {
+        stroke-width: 3;
+        stroke-dasharray: 5, 5;
+        animation: dash 1s linear infinite;
+        filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.3));
+    }
+
+    @keyframes dash {
+        to { stroke-dashoffset: -10; }
+    }
+
+    /* Enhanced Popups */
+    .leaflet-popup-content-wrapper {
+        background: linear-gradient(135deg, rgba(139, 69, 19, 0.98), rgba(101, 67, 33, 0.98));
+        color: #f4f1e8;
+        border: 3px solid #D4AF37;
+        border-radius: 12px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(5px);
+    }
+
+    .leaflet-popup-content {
+        margin: 20px;
+        font-family: 'Crimson Text', serif;
+        line-height: 1.6;
+        max-width: 300px;
+    }
+
+    .popup-header {
+        font-family: 'Cinzel', serif;
+        color: #D4AF37;
+        margin-bottom: 12px;
+        font-size: 1.3rem;
+        font-weight: 700;
+        text-align: center;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        border-bottom: 2px solid #D4AF37;
+        padding-bottom: 8px;
+    }
+
+    .popup-section {
+        margin: 12px 0;
+        padding: 10px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        border-left: 4px solid #D4AF37;
+    }
+
+    .popup-section h4 {
+        color: #FFD700;
+        font-family: 'Cinzel', serif;
+        margin-bottom: 6px;
+        font-size: 1rem;
+    }
+
+    .expand-btn, .action-btn {
+        background: linear-gradient(135deg, #D4AF37, #FFD700);
+        border: none;
+        padding: 8px 16px;
+        border-radius: 20px;
+        color: #2F4F4F;
+        font-family: 'Cinzel', serif;
+        font-weight: 600;
+        cursor: pointer;
+        margin: 5px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    .expand-btn:hover, .action-btn:hover {
+        background: linear-gradient(135deg, #FFD700, #FFF8DC);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Mobile Responsive */
     @media (max-width: 768px) {
         .map-title {
             font-size: 1.2rem;
@@ -212,24 +431,37 @@
             top: 10px;
         }
 
-        .kingdom-info-panel {
+        .control-panel {
             width: calc(100% - 40px);
             right: 20px;
             left: 20px;
             top: 80px;
+            max-height: 40vh;
+        }
+
+        .timeline-control {
+            bottom: 20px;
+            padding: 10px 15px;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .timeline-slider {
+            width: 250px;
         }
 
         .search-control {
             top: 10px;
             left: 10px;
+            padding: 8px 12px;
         }
 
         .search-control input {
-            width: 150px;
+            width: 180px;
         }
     }
 
-    /* Loading animation */
+    /* Loading Animation */
     .loading-overlay {
         position: fixed;
         top: 0;
@@ -238,23 +470,101 @@
         height: 100%;
         background: linear-gradient(135deg, #8B4513, #D2B48C);
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         z-index: 2000;
-        transition: opacity 0.5s ease;
+        transition: opacity 0.8s ease;
     }
 
     .loading-text {
         font-family: 'Cinzel', serif;
-        font-size: 2rem;
+        font-size: 2.5rem;
         color: #f4f1e8;
         text-align: center;
-        animation: pulse 2s infinite;
+        animation: loading-pulse 2s infinite;
+        margin-bottom: 20px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
     }
 
-    @keyframes pulse {
+    .loading-progress {
+        width: 300px;
+        height: 6px;
+        background: rgba(244, 241, 232, 0.3);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .loading-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #D4AF37, #FFD700, #D4AF37);
+        animation: loading-bar 2s ease-in-out infinite;
+    }
+
+    @keyframes loading-pulse {
         0%, 100% { opacity: 0.7; }
         50% { opacity: 1; }
+    }
+
+    @keyframes loading-bar {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(400px); }
+    }
+
+    /* Discovery Effects */
+    .discovery-glow {
+        animation: discovery-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes discovery-pulse {
+        0%, 100% { filter: brightness(1) drop-shadow(0 0 5px rgba(212, 175, 55, 0.3)); }
+        50% { filter: brightness(1.3) drop-shadow(0 0 15px rgba(255, 215, 0, 0.8)); }
+    }
+
+    /* Atmospheric Elements */
+    .weather-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 3;
+        opacity: 0.6;
+    }
+
+    /* Custom Scrollbar */
+    .control-panel::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .control-panel::-webkit-scrollbar-track {
+        background: rgba(101, 67, 33, 0.3);
+        border-radius: 4px;
+    }
+
+    .control-panel::-webkit-scrollbar-thumb {
+        background: #D4AF37;
+        border-radius: 4px;
+    }
+
+    .control-panel::-webkit-scrollbar-thumb:hover {
+        background: #FFD700;
+    }
+
+    .leaflet-popup-tip {
+        background: linear-gradient(135deg, rgba(139, 69, 19, 0.98), rgba(101, 67, 33, 0.98));
+        border: 3px solid #D4AF37;
+    }
+
+    .leaflet-popup-close-button {
+        color: #D4AF37 !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
+    }
+
+    .leaflet-popup-close-button:hover {
+        color: #FFD700 !important;
     }
 </style>
 ```
@@ -263,270 +573,847 @@
 <body>
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-text">
-            Loading the Kingdoms...<br>
-            <small style="font-family: 'Crimson Text', serif; font-size: 1rem;">Preparing your royal domains</small>
+            Conjuring the Royal Realms...
+            <br>
+            <small style="font-family: 'Crimson Text', serif; font-size: 1.2rem;">Prepare for an epic journey</small>
+        </div>
+        <div class="loading-progress">
+            <div class="loading-bar"></div>
         </div>
     </div>
 
 ```
+<!-- Particles Background -->
+<div id="particles-js"></div>
+
 <div class="map-title">
-    The Twin Kingdoms of Aurenne and Daeryndor
+    ⚜️ The Twin Kingdoms of Aurenne and Daeryndor ⚜️
 </div>
 
 <div class="search-control">
-    <input type="text" id="searchInput" placeholder="Search locations..." />
+    <i class="fas fa-search"></i>
+    <input type="text" id="searchInput" placeholder="Seek locations, characters, or lore..." />
 </div>
 
 <div id="map"></div>
 
-<div class="kingdom-info-panel" id="infoPanel">
-    <button class="close-panel" onclick="closeInfoPanel()">&times;</button>
-    <div class="panel-header" id="panelHeader">Kingdom Information</div>
-    <div class="panel-content" id="panelContent">
-        Select a location to learn more...
+<!-- Enhanced Control Panel -->
+<div class="control-panel">
+    <div class="panel-tabs">
+        <div class="panel-tab active" data-tab="lore">
+            <i class="fas fa-scroll"></i> Lore
+        </div>
+        <div class="panel-tab" data-tab="characters">
+            <i class="fas fa-users"></i> Court
+        </div>
+        <div class="panel-tab" data-tab="quests">
+            <i class="fas fa-compass"></i> Quests
+        </div>
+        <div class="panel-tab" data-tab="achievements">
+            <i class="fas fa-trophy"></i> Honors
+        </div>
+    </div>
+
+    <div class="panel-content active" id="lore-content">
+        <h3>Kingdom Lore</h3>
+        <p>Select a location to uncover its secrets and discover the rich history of the Twin Kingdoms.</p>
+        <div id="location-details">
+            <p><em>The winds whisper tales of ancient alliances and forbidden love...</em></p>
+        </div>
+    </div>
+
+    <div class="panel-content" id="characters-content">
+        <h3>Royal Court</h3>
+        <div id="character-list">
+            <div class="popup-section">
+                <h4>👑 House of Daeryndor</h4>
+                <p><strong>Prince Seokjin:</strong> "The Ivory Prince" - Known for his stoic demeanor and scholarly pursuits. Fluent in ancient Valoise.</p>
+                <p><strong>Prince Namjoon:</strong> Master of Historical Archives, secretly corresponds with progressive thinkers.</p>
+                <p><strong>Commander Hoseok:</strong> Royal Guard leader, childhood friend to the princes.</p>
+            </div>
+            <div class="popup-section">
+                <h4>🌟 House of Aurenne</h4>
+                <p><strong>Princess Y/N:</strong> "The Vermillion Rose" - Spirited and intelligent, now Crown Princess of Daeryndor.</p>
+                <p><strong>Princess Elise:</strong> Talented artist and Y/N's beloved younger sister.</p>
+                <p><strong>Lord Taehyung:</strong> Royal Artistic Director with an eye for beauty.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-content" id="quests-content">
+        <h3>Royal Quests</h3>
+        <div id="quest-log">
+            <div class="popup-section">
+                <h4>⚡ Active Quests</h4>
+                <p><strong>Royal Introduction:</strong> Visit both capital cities to understand the kingdom dynamics</p>
+                <p><strong>Border Mysteries:</strong> Investigate the neutral territory of Storeward</p>
+                <p><strong>Scholarly Pursuit:</strong> Visit Iroholor and uncover ancient knowledge</p>
+            </div>
+            <div class="popup-section">
+                <h4>🎯 Available Discoveries</h4>
+                <p><em>Explore locations to unlock new quests and reveal hidden storylines...</em></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-content" id="achievements-content">
+        <h3>Royal Honors</h3>
+        <div id="achievement-list">
+            <div class="popup-section">
+                <h4 style="color: #888">🗺️ First Steps</h4>
+                <p style="color: #aaa">Discover your first location</p>
+                <small style="color: #666">🔒 Locked</small>
+            </div>
+            <div class="popup-section">
+                <h4 style="color: #888">👑 Kingdom Explorer</h4>
+                <p style="color: #aaa">Visit both capital cities</p>
+                <small style="color: #666">🔒 Locked</small>
+            </div>
+            <div class="popup-section">
+                <h4 style="color: #888">📚 Scholar of Lore</h4>
+                <p style="color: #aaa">Read 10 location descriptions</p>
+                <small style="color: #666">🔒 Locked</small>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Leaflet JavaScript -->
+<!-- Timeline Control -->
+<div class="timeline-control">
+    <i class="fas fa-history" style="color: #D4AF37;"></i>
+    <div class="timeline-label" id="timeline-label">Current Era</div>
+    <div class="timeline-slider" id="timeline-slider">
+        <div class="timeline-handle" id="timeline-handle"></div>
+    </div>
+    <i class="fas fa-forward" style="color: #D4AF37;"></i>
+</div>
+
+<!-- Achievement Notification -->
+<div class="achievement-notification" id="achievement-notification">
+    <span class="achievement-icon">🏆</span>
+    <span id="achievement-text">Achievement Unlocked!</span>
+</div>
+
+<!-- Scripts -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/particles.js/2.0.0/particles.min.js"></script>
 
 <script>
-    // Kingdom data with Y-FLIPPED coordinates to fix orientation!
+    // Enhanced Kingdom Data with Rich Lore
     const kingdomData = {
         'Caelforge': {
-            coords: [720, 200], // Top region, center-left in Daeryndor mountains
+            coords: [720, 200],
             kingdom: 'Daeryndor',
             type: 'Capital',
-            description: 'The mighty capital of Daeryndor, carved into the mountainside. This ancient fortress-city overlooks the kingdom\'s harbor and serves as the seat of royal power. Its granite walls have withstood countless sieges.',
+            ruler: 'Prince Seokjin "The Ivory Prince"',
+            description: 'The mighty capital of Daeryndor, carved into the living rock of Mount Kaelros. Ancient granite walls have witnessed centuries of royal intrigue, where duty and desire wage their eternal war.',
             population: '150,000',
-            features: ['Royal Palace', 'Mountain Fortress', 'Great Harbor', 'Royal Archives']
+            features: ['Royal Palace Complex', 'The Great Library', 'Mountain Fortress', 'Royal Archives', 'The Silent Gardens'],
+            secrets: ['Hidden passages beneath the throne room', 'The Ivory Prince\'s private study where he writes in ancient Valoise', 'Secret meetings occur in the Rose Garden at midnight'],
+            characters: ['Prince Seokjin', 'Princess Y/N (after marriage)', 'Royal Guard Commander Hoseok', 'Grand Minister Yoongi'],
+            lore: 'Legend speaks of the Moonlit Pact, signed here three centuries ago, that first bound the kingdoms in an uneasy peace. The castle\'s silver bells ring only for royal weddings and coronations.',
+            relationships: ['Political alliance with Ironroud', 'Tense border with Storeward', 'Ancient rivalry with Solaire'],
+            quests: ['Discover the secret of the Ivory Tower', 'Uncover the truth behind the Royal Archives'],
+            discovered: false,
+            era: 'current',
+            weather: 'snow'
         },
         'Solaire': {
-            coords: [300, 550], // Bottom region, center-right in Aurenne golden area
+            coords: [300, 550],
             kingdom: 'Aurenne',
             type: 'Capital',
-            description: 'The golden capital of Aurenne, built upon sun-kissed cliffs overlooking the Azure Sea. Famous for its opulent palaces, terraced gardens, and vibrant court life that attracts nobles from across the known world.',
+            ruler: 'King Alaric & Queen Eleanora',
+            description: 'The golden capital of Aurenne, where the sun never seems to set on the terraced palaces. Built upon cliffs of Azure gold, this city embodies the warmth and passion of the southern kingdom.',
             population: '200,000',
-            features: ['Palace of Golden Towers', 'Royal Gardens', 'Azure Harbor', 'Grand Amphitheater']
+            features: ['Palace of Golden Towers', 'The Hall of Mirrors', 'Royal Gardens', 'Azure Harbor', 'Grand Amphitheater'],
+            secrets: ['Princess Y/N\'s hidden diary in the tower library', 'Secret tunnels connecting to the harbor', 'The Queen\'s private intelligence network'],
+            characters: ['King Alaric', 'Queen Eleanora', 'Princess Y/N (before marriage)', 'Princess Elise', 'Lord Taehyung'],
+            lore: 'The Azure Crown, worn only by Aurenne queens, is said to grant visions of true love. Princess Y/N refused to wear it before her arranged marriage.',
+            relationships: ['Strained alliance with Caelforge', 'Trade partnership with Lucastel', 'Cultural exchange with Sunmist'],
+            quests: ['Find Princess Y/N\'s lost letters', 'Explore the Royal Gardens\' maze'],
+            discovered: false,
+            era: 'current',
+            weather: 'golden'
         },
         'Frosthaven': {
-            coords: [850, 120], // Top-left in Daeryndor mountains - moved down to match text
+            coords: [850, 120],
             kingdom: 'Daeryndor',
             type: 'Settlement',
-            description: 'A hardy northern settlement known for its skilled craftsmen and proximity to valuable silver mines. The people of Frosthaven are renowned for their resilience against the harsh mountain winters.',
+            ruler: 'Lord Commander Jungkook\'s Family Holdings',
+            description: 'A hardy northern settlement where silver flows like water and craftsmen forge legends in steel. The mountain winds carry both whispers of the past and promises of the future.',
             population: '25,000',
-            features: ['Silver Mines', 'Craftsmen Guilds', 'Mountain Outpost']
+            features: ['The Silver Depths', 'Master Forges', 'Watchtower Keep', 'Artisan Quarter'],
+            secrets: ['Ancient dwarven ruins beneath the mines', 'Commander Jungkook\'s secret training grounds'],
+            characters: ['Mining Guild Masters', 'Elite Guard Trainees', 'Master Craftsmen'],
+            lore: 'The silver mined here was used to create the wedding rings for the royal alliance. Each ring bears ancient protective runes.',
+            relationships: ['Supply route to Caelforge', 'Border defense coordination'],
+            quests: ['Investigate the mysterious silver veins', 'Train with the Elite Guard'],
+            discovered: false,
+            era: 'current',
+            weather: 'snow'
         },
         'Ironroud': {
-            coords: [800, 400], // Center area in Daeryndor mountains
+            coords: [800, 400],
             kingdom: 'Daeryndor',
             type: 'Settlement',
-            description: 'A crucial mountain pass settlement that controls the main trade route between the kingdoms. Its strategic position makes it heavily fortified and economically vital.',
+            ruler: 'Captain Marcus Steelwind',
+            description: 'The great mountain pass where two kingdoms meet. Here, ancient agreements are honored and new alliances are forged in the shadow of eternal peaks.',
             population: '15,000',
-            features: ['Trade Crossing', 'Border Fortress', 'Mountain Pass']
+            features: ['The Iron Gates', 'Neutral Trading Post', 'Diplomatic Quarters', 'Signal Towers'],
+            secrets: ['Hidden vault containing historical treaties', 'Spy network headquarters'],
+            characters: ['Diplomatic Envoys', 'Neutral Traders', 'Border Guards'],
+            lore: 'The Iron Crown Compact was signed here, establishing rules for royal marriages between kingdoms. Princess Y/N passed through these gates on her wedding journey.',
+            relationships: ['Strategic partnership with both capitals', 'Neutral diplomatic zone'],
+            quests: ['Decode ancient diplomatic messages', 'Investigate border incidents'],
+            discovered: false,
+            era: 'current',
+            weather: 'mist'
         },
         'Iroholor': {
-            coords: [850, 650], // Top-right in Daeryndor region - moved down to match text
+            coords: [850, 650],
             kingdom: 'Daeryndor',
             type: 'Settlement',
-            description: 'A remote mountain settlement known for its ancient watchtowers and scholarly monasteries. Monks here preserve the old knowledge and watch the eastern borders.',
+            ruler: 'High Scholar Namjoon',
+            description: 'A remote sanctuary of knowledge where ancient wisdom meets forbidden research. The scholar-monks here guard secrets that could reshape the kingdoms.',
             population: '8,000',
-            features: ['Ancient Monasteries', 'Watchtowers', 'Mountain Libraries']
+            features: ['Ancient Monasteries', 'The Great Observatory', 'Restricted Archives', 'Meditation Gardens'],
+            secrets: ['Forbidden texts about kingdom founding', 'Star charts predicting royal fates', 'Prince Namjoon\'s revolutionary research'],
+            characters: ['Prince Namjoon', 'Scholar-Monks', 'Lady Dahlia (frequent visitor)', 'Ancient Librarians'],
+            lore: 'The Observatory\'s crystal lens shows not just stars, but glimpses of possible futures. Only royal blood may look through it during eclipses.',
+            relationships: ['Intellectual exchange with Caelforge', 'Secret correspondence with Aurenne scholars'],
+            quests: ['Access the Forbidden Wing', 'Solve the Stellar Prophecy', 'Help Prince Namjoon with his research'],
+            discovered: false,
+            era: 'current',
+            weather: 'clear'
         },
         'Storeward': {
-            coords: [620, 180], // Middle-left border area between kingdoms
+            coords: [620, 180],
             kingdom: 'Border Region',
             type: 'Settlement',
-            description: 'A contested border town that has changed hands multiple times throughout history. Its mixed population reflects the complex relationship between the two kingdoms.',
+            ruler: 'Neutral Council',
+            description: 'A town caught between worlds, where cultures blend and conflicts simmer. Here, love knows no borders, but politics demand eternal vigilance.',
             population: '12,000',
-            features: ['Border Market', 'Mixed Population', 'Neutral Ground']
+            features: ['The Neutral Inn', 'Mixed Heritage Quarter', 'Border Market', 'Peace Memorial'],
+            secrets: ['Underground resistance network', 'Hidden romantic meeting places', 'Smuggler tunnels'],
+            characters: ['Mixed-heritage families', 'Neutral peacekeepers', 'Cross-border lovers'],
+            lore: 'The annual Unity Festival celebrates love that transcends borders. Many forbidden romances bloom during this time.',
+            relationships: ['Delicate balance between kingdoms', 'Haven for star-crossed lovers'],
+            quests: ['Mediate border disputes', 'Help reunite separated lovers', 'Uncover smuggling operations'],
+            discovered: false,
+            era: 'current',
+            weather: 'variable'
         },
         'Lucastel': {
-            coords: [370, 320], // Center-left in Aurenne golden area - moved down to match text
+            coords: [370, 320],
             kingdom: 'Aurenne',
             type: 'Settlement',
-            description: 'A prosperous river town known for its vineyards and wine production. The rolling hills around Lucastel produce some of the finest wines in all of Aurenne.',
+            ruler: 'Vintner Lord Jimin',
+            description: 'Rolling hills adorned with golden vineyards, where the finest wines carry whispered secrets and liquid courage flows freely among the nobility.',
             population: '30,000',
-            features: ['Famous Vineyards', 'Wine Markets', 'River Port']
+            features: ['Ancient Vineyards', 'Wine Cellars', 'Festival Grounds', 'Riverside Markets'],
+            secrets: ['Wine cellars hide resistance meetings', 'Love letters preserved in wine bottles', 'Lord Jimin\'s diplomatic intelligence network'],
+            characters: ['Lord Jimin', 'Master Vintners', 'Harvest Festival Celebrants', 'Noble Wine Connoisseurs'],
+            lore: 'The vintage from Princess Y/N\'s birth year was saved for her wedding toast. It remains unopened, waiting for true love.',
+            relationships: ['Primary wine supplier to royal courts', 'Cultural ties to Solaire'],
+            quests: ['Attend the Harvest Festival', 'Discover the secret wine recipes', 'Find the lost vintage'],
+            discovered: false,
+            era: 'current',
+            weather: 'golden'
         },
         'Sunmist': {
-            coords: [250, 180], // Bottom-left coast in Aurenne
+            coords: [250, 180],
             kingdom: 'Aurenne',
             type: 'Settlement',
-            description: 'A picturesque coastal town renowned for its fishing fleet and beautiful sunrises over the Azure Sea. Artists and poets often visit to capture its ethereal beauty.',
+            ruler: 'Artist Colony Council',
+            description: 'Where artists capture the eternal dance of sea and sky, and every sunrise brings new inspiration. The most beautiful love poems of the age were born here.',
             population: '18,000',
-            features: ['Fishing Fleet', 'Artist Colony', 'Coastal Views']
+            features: ['Artist Colony', 'Sunrise Point', 'Pearl Diving Grounds', 'Fishing Fleet'],
+            secrets: ['Hidden cave where artists meet lovers', 'Princess Elise\'s secret artwork studio', 'Romantic sunset viewing spots'],
+            characters: ['Princess Elise (frequent visitor)', 'Master Artists', 'Pearl Divers', 'Romantic Poets'],
+            lore: 'Legend says that couples who watch seven sunrises together from Sunrise Point will be blessed with eternal love.',
+            relationships: ['Artistic inspiration for both kingdoms', 'Sister city to various cultural centers'],
+            quests: ['Commission a royal portrait', 'Find the legendary Pearl of Hearts', 'Attend the Sunrise Festival'],
+            discovered: false,
+            era: 'current',
+            weather: 'misty'
         }
     };
 
-    // Initialize the map
-    let map;
-    let markersLayer;
+    // Character relationships data
+    const characterRelationships = {
+        'Seokjin-Y/N': { type: 'romance', status: 'developing', locations: ['Caelforge', 'Storeward'] },
+        'Namjoon-Dahlia': { type: 'intellectual', status: 'attraction', locations: ['Iroholor', 'Caelforge'] },
+        'Elise-Taehyung': { type: 'artistic', status: 'meeting', locations: ['Sunmist', 'Solaire'] },
+        'Hoseok-Rosalind': { type: 'friendship', status: 'care', locations: ['Caelforge'] },
+        'Jimin-Networks': { type: 'political', status: 'active', locations: ['Lucastel', 'Solaire'] }
+    };
+
+    // Timeline eras
+    const timelineEras = [
+        { name: 'Ancient Era', period: '500+ years ago', description: 'The founding of the kingdoms' },
+        { name: 'War Period', period: '200-100 years ago', description: 'The Great Kingdom Wars' },
+        { name: 'Peace Treaties', period: '100-50 years ago', description: 'First diplomatic relations' },
+        { name: 'Modern Era', period: 'Last 50 years', description: 'Growing cooperation' },
+        { name: 'Current Era', period: 'Present day', description: 'The Royal Alliance' }
+    ];
+
+    // Achievement system
+    class AchievementSystem {
+        constructor() {
+            this.achievements = {
+                'first_discovery': { 
+                    name: 'First Steps', 
+                    description: 'Discovered your first location',
+                    icon: '🗺️',
+                    unlocked: false 
+                },
+                'kingdom_explorer': { 
+                    name: 'Kingdom Explorer', 
+                    description: 'Visited both capital cities',
+                    icon: '👑',
+                    unlocked: false 
+                },
+                'scholar': { 
+                    name: 'Scholar of Lore', 
+                    description: 'Read 10 location descriptions',
+                    icon: '📚',
+                    unlocked: false 
+                },
+                'romance_seeker': { 
+                    name: 'Romantic Heart', 
+                    description: 'Discovered all romantic locations',
+                    icon: '💕',
+                    unlocked: false 
+                },
+                'master_explorer': { 
+                    name: 'Master Explorer', 
+                    description: 'Discovered all locations',
+                    icon: '🌟',
+                    unlocked: false 
+                }
+            };
+            
+            this.discoveredLocations = new Set();
+            this.readDescriptions = 0;
+        }
+
+        checkAchievements() {
+            // First discovery
+            if (this.discoveredLocations.size >= 1 && !this.achievements.first_discovery.unlocked) {
+                this.unlockAchievement('first_discovery');
+            }
+
+            // Kingdom explorer
+            const capitals = ['Caelforge', 'Solaire'];
+            if (capitals.every(cap => this.discoveredLocations.has(cap)) && !this.achievements.kingdom_explorer.unlocked) {
+                this.unlockAchievement('kingdom_explorer');
+            }
+
+            // Scholar
+            if (this.readDescriptions >= 5 && !this.achievements.scholar.unlocked) {
+                this.unlockAchievement('scholar');
+            }
+
+            // Master explorer
+            if (this.discoveredLocations.size >= Object.keys(kingdomData).length && !this.achievements.master_explorer.unlocked) {
+                this.unlockAchievement('master_explorer');
+            }
+        }
+
+        unlockAchievement(id) {
+            this.achievements[id].unlocked = true;
+            this.showAchievementNotification(this.achievements[id]);
+            this.updateAchievementDisplay();
+        }
+
+        showAchievementNotification(achievement) {
+            const notification = document.getElementById('achievement-notification');
+            const text = document.getElementById('achievement-text');
+            
+            text.innerHTML = `<strong>${achievement.name}</strong><br><small>${achievement.description}</small>`;
+            notification.querySelector('.achievement-icon').textContent = achievement.icon;
+            notification.classList.add('show');
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+
+        updateAchievementDisplay() {
+            const list = document.getElementById('achievement-list');
+            list.innerHTML = '';
+
+            Object.entries(this.achievements).forEach(([id, achievement]) => {
+                const div = document.createElement('div');
+                div.className = 'popup-section';
+                div.innerHTML = `
+                    <h4 style="color: ${achievement.unlocked ? '#FFD700' : '#888'}">${achievement.icon} ${achievement.name}</h4>
+                    <p style="color: ${achievement.unlocked ? '#f4f1e8' : '#aaa'}">${achievement.description}</p>
+                    ${achievement.unlocked ? '<small style="color: #D4AF37">✓ Unlocked</small>' : '<small style="color: #666">🔒 Locked</small>'}
+                `;
+                list.appendChild(div);
+            });
+        }
+    }
+
+    // Weather system
+    class WeatherSystem {
+        constructor() {
+            this.currentWeather = 'clear';
+            this.weatherEffects = {
+                'snow': { particles: 100, color: '#ffffff', speed: 2 },
+                'golden': { particles: 50, color: '#ffd700', speed: 1 },
+                'mist': { particles: 30, color: '#e6e6fa', speed: 0.5 },
+                'clear': { particles: 20, color: '#87ceeb', speed: 0.3 }
+            };
+        }
+
+        setWeather(weatherType) {
+            this.currentWeather = weatherType;
+            this.updateParticles();
+        }
+
+        updateParticles() {
+            const config = this.weatherEffects[this.currentWeather];
+            if (window.pJSDom && window.pJSDom[0]) {
+                window.pJSDom[0].pJS.particles.number.value = config.particles;
+                window.pJSDom[0].pJS.particles.color.value = config.color;
+                window.pJSDom[0].pJS.particles.move.speed = config.speed;
+                window.pJSDom[0].pJS.fn.particlesRefresh();
+            }
+        }
+    }
+
+    // Initialize systems
+    let map, markersLayer, achievementSystem, weatherSystem;
+    let currentEra = 4; // Current Era
+    let discoveredLocations = new Set();
+    let relationshipLines = [];
 
     function initializeMap() {
-        // Create map with custom coordinate system for fantasy world
+        // Create map with custom coordinate system
         map = L.map('map', {
             crs: L.CRS.Simple,
             minZoom: -2,
             maxZoom: 3,
             zoomControl: true,
-            attributionControl: false
+            attributionControl: false,
+            preferCanvas: true
         });
 
-        // Set the map bounds to match the image dimensions
+        // Set the map bounds
         const bounds = [[0, 0], [1000, 800]];
-        
-
         const imageUrl = './kingdoms-map.jpg';
 
-        // Add the map image as an overlay
+        // Add the map image overlay
         L.imageOverlay(imageUrl, bounds).addTo(map);
         
-        // Set the initial view
+        // Set initial view
         map.fitBounds(bounds);
         map.setView([500, 400], 0);
+
+        // Initialize systems
+        achievementSystem = new AchievementSystem();
+        weatherSystem = new WeatherSystem();
 
         // Create markers layer
         markersLayer = L.layerGroup().addTo(map);
         
-        // Add location markers
-        addLocationMarkers();
+        // Add enhanced markers
+        addEnhancedMarkers();
         
-        // Add search functionality
-        setupSearch();
+        // Setup enhanced search
+        setupEnhancedSearch();
+        
+        // Setup tab system
+        setupTabSystem();
+        
+        // Setup timeline
+        setupTimeline();
+        
+        // Initialize particles
+        initializeParticles();
+        
+        // Setup day/night cycle
+        setupDayNightCycle();
+        
+        // Show initial achievements
+        achievementSystem.updateAchievementDisplay();
         
         // Hide loading overlay
         setTimeout(() => {
             document.getElementById('loadingOverlay').style.opacity = '0';
             setTimeout(() => {
                 document.getElementById('loadingOverlay').style.display = 'none';
-            }, 500);
-        }, 1500);
+            }, 800);
+        }, 2000);
     }
 
-    function addLocationMarkers() {
+    function addEnhancedMarkers() {
         Object.entries(kingdomData).forEach(([name, data]) => {
-            const kingdom = data.kingdom;
-            let markerClass = 'kingdom-marker';
-            if (kingdom === 'Aurenne') {
+            let markerClass = 'custom-marker';
+            let markerIcon = '●';
+            
+            if (data.kingdom === 'Aurenne') {
                 markerClass += ' aurenne-marker';
-            } else if (kingdom === 'Daeryndor') {
+                markerIcon = data.type === 'Capital' ? '♔' : '⚜️';
+            } else if (data.kingdom === 'Daeryndor') {
                 markerClass += ' daeryndor-marker';
+                markerIcon = data.type === 'Capital' ? '♔' : '⛰️';
+            } else if (data.kingdom === 'Border Region') {
+                markerClass += ' border-marker';
+                markerIcon = '⚖️';
             }
 
-            const markerIcon = L.divIcon({
+            const markerElement = L.divIcon({
                 className: markerClass,
-                html: data.type === 'Capital' ? '♔' : '●',
-                iconSize: [30, 30],
-                iconAnchor: [15, 15],
-                popupAnchor: [0, -15]
+                html: markerIcon,
+                iconSize: [35, 35],
+                iconAnchor: [17.5, 17.5],
+                popupAnchor: [0, -17.5]
             });
 
-            const marker = L.marker(data.coords, { icon: markerIcon })
-                .bindPopup(`
-                    <h4>${name}</h4>
-                    <p><strong>Kingdom:</strong> ${kingdom}</p>
-                    <p><strong>Type:</strong> ${data.type}</p>
-                    <p><strong>Population:</strong> ${data.population}</p>
-                    <button onclick="showDetailedInfo('${name}')" style="
-                        background: #D4AF37; 
-                        border: none; 
-                        padding: 8px 15px; 
-                        border-radius: 4px; 
-                        color: #2F4F4F; 
-                        font-weight: bold; 
-                        cursor: pointer; 
-                        margin-top: 10px;
-                        font-family: 'Crimson Text', serif;
-                    ">Learn More</button>
-                `);
+            const marker = L.marker(data.coords, { icon: markerElement })
+                .bindPopup(createEnhancedPopup(name, data), {
+                    maxWidth: 350,
+                    className: 'enhanced-popup'
+                });
+
+            marker.on('click', () => {
+                discoverLocation(name, data);
+                weatherSystem.setWeather(data.weather);
+            });
             
             markersLayer.addLayer(marker);
         });
+
+        // Add relationship lines
+        drawRelationshipLines();
     }
 
-    function showDetailedInfo(locationName) {
-        const data = kingdomData[locationName];
-        const panel = document.getElementById('infoPanel');
-        const header = document.getElementById('panelHeader');
-        const content = document.getElementById('panelContent');
+    function createEnhancedPopup(name, data) {
+        return `
+            <div class="popup-header">${name}</div>
+            
+            <div class="popup-section">
+                <h4>👑 Ruler</h4>
+                <p>${data.ruler}</p>
+            </div>
 
-        header.textContent = locationName;
-        content.innerHTML = `
-            <h3>Kingdom: ${data.kingdom}</h3>
-            <p><strong>Type:</strong> ${data.type}</p>
-            <p><strong>Population:</strong> ${data.population}</p>
+            <div class="popup-section">
+                <h4>🏛️ Kingdom</h4>
+                <p>${data.kingdom} • Population: ${data.population}</p>
+            </div>
+
+            <div class="popup-section">
+                <h4>📜 Description</h4>
+                <p>${data.description}</p>
+            </div>
+
+            <div style="text-align: center; margin-top: 15px;">
+                <button class="expand-btn" onclick="expandLocationDetails('${name}')">
+                    📚 Discover Lore
+                </button>
+                <button class="action-btn" onclick="focusLocation('${name}')">
+                    🔍 Center View
+                </button>
+            </div>
+        `;
+    }
+
+    function discoverLocation(name, data) {
+        if (!discoveredLocations.has(name)) {
+            discoveredLocations.add(name);
+            achievementSystem.discoveredLocations.add(name);
+            achievementSystem.readDescriptions++;
+            achievementSystem.checkAchievements();
             
-            <h3>Description</h3>
-            <p>${data.description}</p>
-            
-            <h3>Notable Features</h3>
-            <ul style="margin-left: 20px; margin-bottom: 15px;">
-                ${data.features.map(feature => `<li>${feature}</li>`).join('')}
-            </ul>
-            
-            <button onclick="focusLocation('${locationName}')" style="
-                background: #D4AF37; 
-                border: none; 
-                padding: 10px 20px; 
-                border-radius: 4px; 
-                color: #2F4F4F; 
-                font-weight: bold; 
-                cursor: pointer; 
-                width: 100%;
-                font-family: 'Crimson Text', serif;
-                font-size: 1rem;
-            ">Center on Map</button>
+            // Add discovery glow effect
+            const marker = findMarkerByName(name);
+            if (marker) {
+                marker.getElement().classList.add('discovery-glow');
+                setTimeout(() => {
+                    marker.getElement().classList.remove('discovery-glow');
+                }, 3000);
+            }
+        }
+    }
+
+    function expandLocationDetails(name) {
+        const data = kingdomData[name];
+        const details = document.getElementById('location-details');
+        
+        details.innerHTML = `
+            <div class="popup-section">
+                <h4>🏰 ${name}</h4>
+                <p><strong>Era:</strong> ${data.era}</p>
+                <p><strong>Type:</strong> ${data.type}</p>
+            </div>
+
+            <div class="popup-section">
+                <h4>📚 Ancient Lore</h4>
+                <p>${data.lore}</p>
+            </div>
+
+            <div class="popup-section">
+                <h4>🏛️ Notable Features</h4>
+                <ul>${data.features.map(f => `<li>${f}</li>`).join('')}</ul>
+            </div>
+
+            <div class="popup-section">
+                <h4>🤫 Hidden Secrets</h4>
+                <ul>${data.secrets.map(s => `<li><em>${s}</em></li>`).join('')}</ul>
+            </div>
+
+            <div class="popup-section">
+                <h4>👥 Notable Characters</h4>
+                <ul>${data.characters.map(c => `<li>${c}</li>`).join('')}</ul>
+            </div>
+
+            <div class="popup-section">
+                <h4>🤝 Relationships</h4>
+                <ul>${data.relationships.map(r => `<li>${r}</li>`).join('')}</ul>
+            </div>
         `;
 
-        panel.style.display = 'block';
+        // Switch to lore tab
+        switchTab('lore');
     }
 
-    function closeInfoPanel() {
-        document.getElementById('infoPanel').style.display = 'none';
+    function drawRelationshipLines() {
+        // Draw relationship lines between connected locations
+        const connections = [
+            { from: 'Caelforge', to: 'Ironroud', type: 'alliance' },
+            { from: 'Solaire', to: 'Lucastel', type: 'trade' },
+            { from: 'Caelforge', to: 'Frosthaven', type: 'supply' },
+            { from: 'Storeward', to: 'Caelforge', type: 'neutral' },
+            { from: 'Storeward', to: 'Solaire', type: 'neutral' },
+            { from: 'Iroholor', to: 'Caelforge', type: 'scholarly' }
+        ];
+
+        connections.forEach(conn => {
+            const fromData = kingdomData[conn.from];
+            const toData = kingdomData[conn.to];
+            
+            if (fromData && toData) {
+                const line = L.polyline([fromData.coords, toData.coords], {
+                    color: getRelationshipColor(conn.type),
+                    weight: 2,
+                    opacity: 0.6,
+                    dashArray: '5, 10',
+                    className: 'relationship-line'
+                }).bindTooltip(`${conn.type}: ${conn.from} ↔ ${conn.to}`);
+                
+                relationshipLines.push(line);
+                line.addTo(map);
+            }
+        });
     }
 
-    function focusLocation(locationName) {
-        const data = kingdomData[locationName];
-        map.setView(data.coords, 1);
+    function getRelationshipColor(type) {
+        const colors = {
+            'alliance': '#4CAF50',
+            'trade': '#FF9800',
+            'supply': '#2196F3',
+            'neutral': '#9E9E9E',
+            'scholarly': '#9C27B0',
+            'romance': '#F44336'
+        };
+        return colors[type] || '#666666';
     }
 
-    function setupSearch() {
+    function setupEnhancedSearch() {
         const searchInput = document.getElementById('searchInput');
         
-        searchInput.addEventListener('input', function(e) {
+        searchInput.addEventListener('input', debounce(function(e) {
             const query = e.target.value.toLowerCase();
             
             if (query.length < 2) return;
             
-            // Simple search through location names
-            const matches = Object.keys(kingdomData).filter(name => 
-                name.toLowerCase().includes(query) ||
-                kingdomData[name].kingdom.toLowerCase().includes(query) ||
-                kingdomData[name].type.toLowerCase().includes(query)
-            );
+            // Search through locations, characters, and lore
+            const matches = Object.keys(kingdomData).filter(name => {
+                const data = kingdomData[name];
+                return name.toLowerCase().includes(query) ||
+                       data.kingdom.toLowerCase().includes(query) ||
+                       data.ruler.toLowerCase().includes(query) ||
+                       data.description.toLowerCase().includes(query) ||
+                       data.characters.some(c => c.toLowerCase().includes(query)) ||
+                       data.lore.toLowerCase().includes(query);
+            });
             
             if (matches.length > 0) {
                 const firstMatch = matches[0];
                 const coords = kingdomData[firstMatch].coords;
                 map.setView(coords, 1);
                 
-                // Show popup for the first match
-                markersLayer.eachLayer(layer => {
-                    if (layer.getLatLng().lat === coords[0] && layer.getLatLng().lng === coords[1]) {
-                        layer.openPopup();
-                    }
-                });
+                // Open popup for the first match
+                const marker = findMarkerByName(firstMatch);
+                if (marker) {
+                    marker.openPopup();
+                    discoverLocation(firstMatch, kingdomData[firstMatch]);
+                }
             }
+        }, 300));
+    }
+
+    function setupTabSystem() {
+        const tabs = document.querySelectorAll('.panel-tab');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.dataset.tab;
+                switchTab(targetTab);
+            });
         });
     }
 
+    function switchTab(targetTab) {
+        // Remove active class from all tabs and contents
+        document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel-content').forEach(c => c.classList.remove('active'));
+        
+        // Add active class to clicked tab and corresponding content
+        document.querySelector(`[data-tab="${targetTab}"]`).classList.add('active');
+        document.getElementById(`${targetTab}-content`).classList.add('active');
+    }
+
+    function setupTimeline() {
+        const slider = document.getElementById('timeline-slider');
+        const handle = document.getElementById('timeline-handle');
+        const label = document.getElementById('timeline-label');
+        
+        let isDragging = false;
+        
+        function updateTimeline(percentage) {
+            const eraIndex = Math.floor(percentage * timelineEras.length);
+            const clampedIndex = Math.max(0, Math.min(eraIndex, timelineEras.length - 1));
+            
+            currentEra = clampedIndex;
+            const era = timelineEras[clampedIndex];
+            
+            handle.style.left = `${(clampedIndex / (timelineEras.length - 1)) * (slider.offsetWidth - 18)}px`;
+            label.textContent = era.name;
+            
+            // Update map appearance based on era
+            updateMapForEra(era);
+        }
+        
+        slider.addEventListener('click', (e) => {
+            const rect = slider.getBoundingClientRect();
+            const percentage = (e.clientX - rect.left) / rect.width;
+            updateTimeline(percentage);
+        });
+        
+        handle.addEventListener('mousedown', () => {
+            isDragging = true;
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const rect = slider.getBoundingClientRect();
+                const percentage = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                updateTimeline(percentage);
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+        
+        // Initialize timeline
+        updateTimeline(1); // Start at current era
+    }
+
+    function updateMapForEra(era) {
+        // Update markers based on era
+        markersLayer.eachLayer(layer => {
+            if (layer.options && layer.options.icon) {
+                const opacity = era.name === 'Current Era' ? 1 : 0.7;
+                layer.setOpacity(opacity);
+            }
+        });
+        
+        // Update relationship lines
+        relationshipLines.forEach(line => {
+            const opacity = era.name === 'Current Era' ? 0.6 : 0.3;
+            line.setStyle({ opacity });
+        });
+    }
+
+    function initializeParticles() {
+        particlesJS('particles-js', {
+            particles: {
+                number: { value: 50 },
+                color: { value: ['#ffd700', '#daa520', '#87ceeb'] },
+                shape: { type: 'circle' },
+                opacity: { value: 0.6, random: true },
+                size: { value: 3, random: true },
+                move: {
+                    enable: true,
+                    speed: 1,
+                    direction: 'top-right',
+                    random: true,
+                    out_mode: 'out'
+                }
+            },
+            interactivity: {
+                detect_on: 'canvas',
+                events: {
+                    onhover: { enable: true, mode: 'repulse' },
+                    onclick: { enable: true, mode: 'push' }
+                }
+            },
+            retina_detect: true
+        });
+    }
+
+    function setupDayNightCycle() {
+        let currentCycle = 0; // 0: dawn, 1: day, 2: dusk, 3: night
+        const cycles = ['map-dawn', 'map-day', 'map-dusk', 'map-night'];
+        
+        setInterval(() => {
+            map.getContainer().className = map.getContainer().className.replace(/map-(dawn|day|dusk|night)/, '');
+            map.getContainer().classList.add(cycles[currentCycle]);
+            currentCycle = (currentCycle + 1) % cycles.length;
+        }, 30000); // Change every 30 seconds
+    }
+
+    function focusLocation(locationName) {
+        const data = kingdomData[locationName];
+        if (data) {
+            map.setView(data.coords, 1);
+            discoverLocation(locationName, data);
+        }
+    }
+
+    function findMarkerByName(name) {
+        let foundMarker = null;
+        markersLayer.eachLayer(layer => {
+            if (layer.getPopup() && layer.getPopup().getContent().includes(name)) {
+                foundMarker = layer;
+            }
+        });
+        return foundMarker;
+    }
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
     // Handle window resize
-    window.addEventListener('resize', function() {
+    window.addEventListener('resize', debounce(function() {
         if (map) {
             map.invalidateSize();
         }
-    });
+    }, 250));
 
     // Initialize map when page loads
     document.addEventListener('DOMContentLoaded', function() {
@@ -536,9 +1423,14 @@
     // Keyboard navigation
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
-            closeInfoPanel();
+            map.closePopup();
         }
     });
+
+    // Make functions globally available
+    window.expandLocationDetails = expandLocationDetails;
+    window.focusLocation = focusLocation;
+    window.switchTab = switchTab;
 </script>
 ```
 
