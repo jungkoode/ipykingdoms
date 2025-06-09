@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kingdoms of Aurenne and Daeryndor - Interactive Map</title>
+
+```
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<!-- Google Fonts for medieval aesthetic -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Crimson Text', serif;
+        background: linear-gradient(135deg, #8B4513, #D2B48C);
+        overflow: hidden;
+    }
+
+    #map {
+        width: 100vw;
+        height: 100vh;
+        background: #f4f1e8;
+    }
+
+    .map-title {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        background: rgba(139, 69, 19, 0.9);
+        color: #f4f1e8;
+        padding: 15px 30px;
+        border-radius: 8px;
+        border: 2px solid #8B6914;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        font-family: 'Cinzel', serif;
+        font-size: 1.8rem;
+        font-weight: 600;
+        text-align: center;
+        letter-spacing: 2px;
+    }
+
+    .kingdom-info-panel {
+        position: absolute;
+        top: 100px;
+        right: 20px;
+        width: 320px;
+        background: rgba(139, 69, 19, 0.95);
+        color: #f4f1e8;
+        border-radius: 10px;
+        border: 2px solid #8B6914;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        z-index: 1000;
+        max-height: calc(100vh - 140px);
+        overflow-y: auto;
+        display: none;
+    }
+
+    .panel-header {
+        background: #654321;
+        padding: 15px;
+        border-bottom: 2px solid #8B6914;
+        font-family: 'Cinzel', serif;
+        font-size: 1.3rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .panel-content {
+        padding: 20px;
+        line-height: 1.6;
+    }
+
+    .panel-content h3 {
+        font-family: 'Cinzel', serif;
+        color: #D4AF37;
+        margin-bottom: 10px;
+        font-size: 1.1rem;
+    }
+
+    .panel-content p {
+        margin-bottom: 15px;
+        font-size: 0.95rem;
+    }
+
+    .close-panel {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        background: none;
+        border: none;
+        color: #f4f1e8;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 5px;
+    }
+
+    .close-panel:hover {
+        color: #D4AF37;
+    }
+
+    /* Custom popup styling */
+    .leaflet-popup-content-wrapper {
+        background: rgba(139, 69, 19, 0.95);
+        color: #f4f1e8;
+        border: 2px solid #8B6914;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .leaflet-popup-content {
+        margin: 15px;
+        font-family: 'Crimson Text', serif;
+        line-height: 1.5;
+    }
+
+    .leaflet-popup-content h4 {
+        font-family: 'Cinzel', serif;
+        color: #D4AF37;
+        margin-bottom: 8px;
+        font-size: 1.1rem;
+    }
+
+    .leaflet-popup-tip {
+        background: rgba(139, 69, 19, 0.95);
+        border: 2px solid #8B6914;
+    }
+
+    /* Custom control styling */
+    .leaflet-control-layers {
+        background: rgba(139, 69, 19, 0.9);
+        border: 2px solid #8B6914;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .leaflet-control-layers-label {
+        color: #f4f1e8;
+        font-family: 'Crimson Text', serif;
+    }
+
+    .search-control {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 1000;
+        background: rgba(139, 69, 19, 0.9);
+        padding: 10px;
+        border-radius: 8px;
+        border: 2px solid #8B6914;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .search-control input {
+        background: #f4f1e8;
+        border: 1px solid #8B6914;
+        border-radius: 4px;
+        padding: 8px 12px;
+        font-family: 'Crimson Text', serif;
+        width: 200px;
+    }
+
+    .search-control input:focus {
+        outline: none;
+        border-color: #D4AF37;
+        box-shadow: 0 0 5px rgba(212, 175, 55, 0.5);
+    }
+
+    /* Custom marker styling */
+    .kingdom-marker {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: 3px solid;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .aurenne-marker {
+        background: linear-gradient(135deg, #DAA520, #FFD700);
+        border-color: #B8860B;
+    }
+
+    .daeryndor-marker {
+        background: linear-gradient(135deg, #2F4F4F, #708090);
+        border-color: #1C1C1C;
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+        .map-title {
+            font-size: 1.2rem;
+            padding: 10px 20px;
+            top: 10px;
+        }
+
+        .kingdom-info-panel {
+            width: calc(100% - 40px);
+            right: 20px;
+            left: 20px;
+            top: 80px;
+        }
+
+        .search-control {
+            top: 10px;
+            left: 10px;
+        }
+
+        .search-control input {
+            width: 150px;
+        }
+    }
+
+    /* Loading animation */
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #8B4513, #D2B48C);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        transition: opacity 0.5s ease;
+    }
+
+    .loading-text {
+        font-family: 'Cinzel', serif;
+        font-size: 2rem;
+        color: #f4f1e8;
+        text-align: center;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 0.7; }
+        50% { opacity: 1; }
+    }
+</style>
+```
+
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-text">
+            Loading the Kingdoms...<br>
+            <small style="font-family: 'Crimson Text', serif; font-size: 1rem;">Preparing your royal domains</small>
+        </div>
+    </div>
+
+```
+<div class="map-title">
+    The Twin Kingdoms of Aurenne and Daeryndor
+</div>
+
+<div class="search-control">
+    <input type="text" id="searchInput" placeholder="Search locations..." />
+</div>
+
+<div id="map"></div>
+
+<div class="kingdom-info-panel" id="infoPanel">
+    <button class="close-panel" onclick="closeInfoPanel()">&times;</button>
+    <div class="panel-header" id="panelHeader">Kingdom Information</div>
+    <div class="panel-content" id="panelContent">
+        Select a location to learn more...
+    </div>
+</div>
+
+<!-- Leaflet JavaScript -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // Kingdom data
+    const kingdomData = {
+        'Caelforge': {
+            coords: [680, 320],
+            kingdom: 'Daeryndor',
+            type: 'Capital',
+            description: 'The mighty capital of Daeryndor, carved into the mountainside. This ancient fortress-city overlooks the kingdom\'s harbor and serves as the seat of royal power. Its granite walls have withstood countless sieges.',
+            population: '150,000',
+            features: ['Royal Palace', 'Mountain Fortress', 'Great Harbor', 'Royal Archives']
+        },
+        'Solaire': {
+            coords: [580, 750],
+            kingdom: 'Aurenne',
+            type: 'Capital',
+            description: 'The golden capital of Aurenne, built upon sun-kissed cliffs overlooking the Azure Sea. Famous for its opulent palaces, terraced gardens, and vibrant court life that attracts nobles from across the known world.',
+            population: '200,000',
+            features: ['Palace of Golden Towers', 'Royal Gardens', 'Azure Harbor', 'Grand Amphitheater']
+        },
+        'Frosthaven': {
+            coords: [280, 280],
+            kingdom: 'Daeryndor',
+            type: 'Settlement',
+            description: 'A hardy northern settlement known for its skilled craftsmen and proximity to valuable silver mines. The people of Frosthaven are renowned for their resilience against the harsh mountain winters.',
+            population: '25,000',
+            features: ['Silver Mines', 'Craftsmen Guilds', 'Mountain Outpost']
+        },
+        'Ironroud': {
+            coords: [450, 320],
+            kingdom: 'Daeryndor',
+            type: 'Settlement',
+            description: 'A crucial mountain pass settlement that controls the main trade route between the kingdoms. Its strategic position makes it heavily fortified and economically vital.',
+            population: '15,000',
+            features: ['Trade Crossing', 'Border Fortress', 'Mountain Pass']
+        },
+        'Iroholor': {
+            coords: [650, 280],
+            kingdom: 'Daeryndor',
+            type: 'Settlement',
+            description: 'A remote mountain settlement known for its ancient watchtowers and scholarly monasteries. Monks here preserve the old knowledge and watch the eastern borders.',
+            population: '8,000',
+            features: ['Ancient Monasteries', 'Watchtowers', 'Mountain Libraries']
+        },
+        'Storeward': {
+            coords: [320, 480],
+            kingdom: 'Border Region',
+            type: 'Settlement',
+            description: 'A contested border town that has changed hands multiple times throughout history. Its mixed population reflects the complex relationship between the two kingdoms.',
+            population: '12,000',
+            features: ['Border Market', 'Mixed Population', 'Neutral Ground']
+        },
+        'Lucastel': {
+            coords: [280, 650],
+            kingdom: 'Aurenne',
+            type: 'Settlement',
+            description: 'A prosperous river town known for its vineyards and wine production. The rolling hills around Lucastel produce some of the finest wines in all of Aurenne.',
+            population: '30,000',
+            features: ['Famous Vineyards', 'Wine Markets', 'River Port']
+        },
+        'Sunmist': {
+            coords: [180, 820],
+            kingdom: 'Aurenne',
+            type: 'Settlement',
+            description: 'A picturesque coastal town renowned for its fishing fleet and beautiful sunrises over the Azure Sea. Artists and poets often visit to capture its ethereal beauty.',
+            population: '18,000',
+            features: ['Fishing Fleet', 'Artist Colony', 'Coastal Views']
+        }
+    };
+
+    // Initialize the map
+    let map;
+    let markersLayer;
+
+    function initializeMap() {
+        // Create map with custom coordinate system for fantasy world
+        map = L.map('map', {
+            crs: L.CRS.Simple,
+            minZoom: -2,
+            maxZoom: 3,
+            zoomControl: true,
+            attributionControl: false
+        });
+
+        // Set the map bounds to match the image dimensions
+        const bounds = [[0, 0], [1000, 800]];
+    
+
+const imageUrl = './kingdoms-map.jpg';
+            <svg width="800" height="1000" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <pattern id="parchment" patternUnits="userSpaceOnUse" width="100" height="100">
+                        <rect width="100" height="100" fill="#f4f1e8"/>
+                        <circle cx="20" cy="20" r="1" fill="#e6d7c3" opacity="0.3"/>
+                        <circle cx="80" cy="60" r="1.5" fill="#d4c4a8" opacity="0.2"/>
+                        <circle cx="60" cy="90" r="1" fill="#e6d7c3" opacity="0.4"/>
+                    </pattern>
+                </defs>
+                <rect width="800" height="1000" fill="url(#parchment)"/>
+                <text x="400" y="100" text-anchor="middle" font-family="serif" font-size="36" fill="#2F4F4F">DAERYNDOR</text>
+                <text x="400" y="900" text-anchor="middle" font-family="serif" font-size="36" fill="#B8860B">AURENNE</text>
+                <text x="400" y="500" text-anchor="middle" font-family="serif" font-size="24" fill="#8B4513">Your Map Will Appear Here</text>
+                <text x="400" y="530" text-anchor="middle" font-family="serif" font-size="16" fill="#8B4513">Upload your image to GitHub and update the imageUrl variable</text>
+            </svg>
+        `);
+
+        // Add the map image as an overlay
+        L.imageOverlay(imageUrl, bounds).addTo(map);
+        
+        // Set the initial view
+        map.fitBounds(bounds);
+        map.setView([500, 400], 0);
+
+        // Create markers layer
+        markersLayer = L.layerGroup().addTo(map);
+        
+        // Add location markers
+        addLocationMarkers();
+        
+        // Add search functionality
+        setupSearch();
+        
+        // Hide loading overlay
+        setTimeout(() => {
+            document.getElementById('loadingOverlay').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }, 500);
+        }, 1500);
+    }
+
+    function addLocationMarkers() {
+        Object.entries(kingdomData).forEach(([name, data]) => {
+            const kingdom = data.kingdom;
+            let markerClass = 'kingdom-marker';
+            if (kingdom === 'Aurenne') {
+                markerClass += ' aurenne-marker';
+            } else if (kingdom === 'Daeryndor') {
+                markerClass += ' daeryndor-marker';
+            }
+
+            const markerIcon = L.divIcon({
+                className: markerClass,
+                html: data.type === 'Capital' ? '♔' : '●',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15],
+                popupAnchor: [0, -15]
+            });
+
+            const marker = L.marker(data.coords, { icon: markerIcon })
+                .bindPopup(`
+                    <h4>${name}</h4>
+                    <p><strong>Kingdom:</strong> ${kingdom}</p>
+                    <p><strong>Type:</strong> ${data.type}</p>
+                    <p><strong>Population:</strong> ${data.population}</p>
+                    <button onclick="showDetailedInfo('${name}')" style="
+                        background: #D4AF37; 
+                        border: none; 
+                        padding: 8px 15px; 
+                        border-radius: 4px; 
+                        color: #2F4F4F; 
+                        font-weight: bold; 
+                        cursor: pointer; 
+                        margin-top: 10px;
+                        font-family: 'Crimson Text', serif;
+                    ">Learn More</button>
+                `);
+            
+            markersLayer.addLayer(marker);
+        });
+    }
+
+    function showDetailedInfo(locationName) {
+        const data = kingdomData[locationName];
+        const panel = document.getElementById('infoPanel');
+        const header = document.getElementById('panelHeader');
+        const content = document.getElementById('panelContent');
+
+        header.textContent = locationName;
+        content.innerHTML = `
+            <h3>Kingdom: ${data.kingdom}</h3>
+            <p><strong>Type:</strong> ${data.type}</p>
+            <p><strong>Population:</strong> ${data.population}</p>
+            
+            <h3>Description</h3>
+            <p>${data.description}</p>
+            
+            <h3>Notable Features</h3>
+            <ul style="margin-left: 20px; margin-bottom: 15px;">
+                ${data.features.map(feature => `<li>${feature}</li>`).join('')}
+            </ul>
+            
+            <button onclick="focusLocation('${locationName}')" style="
+                background: #D4AF37; 
+                border: none; 
+                padding: 10px 20px; 
+                border-radius: 4px; 
+                color: #2F4F4F; 
+                font-weight: bold; 
+                cursor: pointer; 
+                width: 100%;
+                font-family: 'Crimson Text', serif;
+                font-size: 1rem;
+            ">Center on Map</button>
+        `;
+
+        panel.style.display = 'block';
+    }
+
+    function closeInfoPanel() {
+        document.getElementById('infoPanel').style.display = 'none';
+    }
+
+    function focusLocation(locationName) {
+        const data = kingdomData[locationName];
+        map.setView(data.coords, 1);
+    }
+
+    function setupSearch() {
+        const searchInput = document.getElementById('searchInput');
+        
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase();
+            
+            if (query.length < 2) return;
+            
+            // Simple search through location names
+            const matches = Object.keys(kingdomData).filter(name => 
+                name.toLowerCase().includes(query) ||
+                kingdomData[name].kingdom.toLowerCase().includes(query) ||
+                kingdomData[name].type.toLowerCase().includes(query)
+            );
+            
+            if (matches.length > 0) {
+                const firstMatch = matches[0];
+                const coords = kingdomData[firstMatch].coords;
+                map.setView(coords, 1);
+                
+                // Show popup for the first match
+                markersLayer.eachLayer(layer => {
+                    if (layer.getLatLng().lat === coords[0] && layer.getLatLng().lng === coords[1]) {
+                        layer.openPopup();
+                    }
+                });
+            }
+        });
+    }
+
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        if (map) {
+            map.invalidateSize();
+        }
+    });
+
+    // Initialize map when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeMap();
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeInfoPanel();
+        }
+    });
+</script>
+```
+
+</body>
+</html>
