@@ -291,10 +291,11 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    // Kingdom data with ACTUALLY CORRECT coordinates based on the real map positions!
+    // Kingdom data with CORRECTED coordinates based on the actual map positions!
+    // Note: Y coordinates are inverted - smaller Y = top of map, larger Y = bottom of map
     const kingdomData = {
         'Caelforge': {
-            coords: [250, 320], // Center-left in Daeryndor mountains (TOP region)
+            coords: [280, 200], // Top region, center-left in Daeryndor mountains
             kingdom: 'Daeryndor',
             type: 'Capital',
             description: 'The mighty capital of Daeryndor, carved into the mountainside. This ancient fortress-city overlooks the kingdom\'s harbor and serves as the seat of royal power. Its granite walls have withstood countless sieges.',
@@ -302,7 +303,7 @@
             features: ['Royal Palace', 'Mountain Fortress', 'Great Harbor', 'Royal Archives']
         },
         'Solaire': {
-            coords: [650, 580], // Center-right in Aurenne golden area (BOTTOM region)  
+            coords: [700, 550], // Bottom region, center-right in Aurenne golden area
             kingdom: 'Aurenne',
             type: 'Capital',
             description: 'The golden capital of Aurenne, built upon sun-kissed cliffs overlooking the Azure Sea. Famous for its opulent palaces, terraced gardens, and vibrant court life that attracts nobles from across the known world.',
@@ -310,7 +311,7 @@
             features: ['Palace of Golden Towers', 'Royal Gardens', 'Azure Harbor', 'Grand Amphitheater']
         },
         'Frosthaven': {
-            coords: [150, 180], // Top-left in Daeryndor mountains
+            coords: [120, 120], // Top-left in Daeryndor mountains
             kingdom: 'Daeryndor',
             type: 'Settlement',
             description: 'A hardy northern settlement known for its skilled craftsmen and proximity to valuable silver mines. The people of Frosthaven are renowned for their resilience against the harsh mountain winters.',
@@ -318,7 +319,7 @@
             features: ['Silver Mines', 'Craftsmen Guilds', 'Mountain Outpost']
         },
         'Ironroud': {
-            coords: [400, 220], // Center area in Daeryndor mountains
+            coords: [200, 400], // Center area in Daeryndor mountains
             kingdom: 'Daeryndor',
             type: 'Settlement',
             description: 'A crucial mountain pass settlement that controls the main trade route between the kingdoms. Its strategic position makes it heavily fortified and economically vital.',
@@ -326,7 +327,7 @@
             features: ['Trade Crossing', 'Border Fortress', 'Mountain Pass']
         },
         'Iroholor': {
-            coords: [650, 180], // Top-right in Daeryndor region
+            coords: [120, 650], // Top-right in Daeryndor region
             kingdom: 'Daeryndor',
             type: 'Settlement',
             description: 'A remote mountain settlement known for its ancient watchtowers and scholarly monasteries. Monks here preserve the old knowledge and watch the eastern borders.',
@@ -334,7 +335,7 @@
             features: ['Ancient Monasteries', 'Watchtowers', 'Mountain Libraries']
         },
         'Storeward': {
-            coords: [250, 420], // Middle-left border area between kingdoms
+            coords: [380, 180], // Middle-left border area between kingdoms
             kingdom: 'Border Region',
             type: 'Settlement',
             description: 'A contested border town that has changed hands multiple times throughout history. Its mixed population reflects the complex relationship between the two kingdoms.',
@@ -342,7 +343,7 @@
             features: ['Border Market', 'Mixed Population', 'Neutral Ground']
         },
         'Lucastel': {
-            coords: [300, 500], // Center-left in Aurenne golden area
+            coords: [480, 320], // Center-left in Aurenne golden area
             kingdom: 'Aurenne',
             type: 'Settlement',
             description: 'A prosperous river town known for its vineyards and wine production. The rolling hills around Lucastel produce some of the finest wines in all of Aurenne.',
@@ -350,7 +351,7 @@
             features: ['Famous Vineyards', 'Wine Markets', 'River Port']
         },
         'Sunmist': {
-            coords: [180, 650], // Bottom-left coast in Aurenne
+            coords: [750, 180], // Bottom-left coast in Aurenne
             kingdom: 'Aurenne',
             type: 'Settlement',
             description: 'A picturesque coastal town renowned for its fishing fleet and beautiful sunrises over the Azure Sea. Artists and poets often visit to capture its ethereal beauty.',
